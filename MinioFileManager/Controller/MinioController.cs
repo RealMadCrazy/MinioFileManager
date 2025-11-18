@@ -19,7 +19,6 @@ namespace MinioFileManager.Controller
     [ApiController]
     public class MinioController(IMinioClient minioClient, IOptions<MinioSettings> options) : ControllerBase
     {
-        private readonly IMinioClient _minioClient = minioClient;
         private readonly MinioSettings _settings = options.Value;
 
         // ================================================================
@@ -41,14 +40,14 @@ namespace MinioFileManager.Controller
             try
             {
                 // Ensure the target bucket exists before uploading
-                bool bucketExists = await _minioClient.BucketExistsAsync(new BucketExistsArgs().WithBucket(bucketName));
+                bool bucketExists = await minioClient.BucketExistsAsync(new BucketExistsArgs().WithBucket(bucketName));
                 if (!bucketExists)
-                    await _minioClient.MakeBucketAsync(new MakeBucketArgs().WithBucket(bucketName));
+                    await minioClient.MakeBucketAsync(new MakeBucketArgs().WithBucket(bucketName));
 
                 await using var stream = file.OpenReadStream();
 
                 // Upload the file to MinIO
-                await _minioClient.PutObjectAsync(new PutObjectArgs()
+                await minioClient.PutObjectAsync(new PutObjectArgs()
                     .WithBucket(bucketName)
                     .WithObject(safeFileName)
                     .WithStreamData(stream)
@@ -79,7 +78,7 @@ namespace MinioFileManager.Controller
             try
             {
                 // Check if the bucket exists
-                bool bucketExists = await _minioClient.BucketExistsAsync(
+                bool bucketExists = await minioClient.BucketExistsAsync(
                     new BucketExistsArgs().WithBucket(bucketName));
                 if (!bucketExists)
                     return NotFound($"Bucket '{bucketName}' does not exist");
@@ -87,7 +86,7 @@ namespace MinioFileManager.Controller
                 // Check if the file exists
                 try
                 {
-                    await _minioClient.StatObjectAsync(
+                    await minioClient.StatObjectAsync(
                         new StatObjectArgs().WithBucket(bucketName).WithObject(safeFileName));
                 }
                 catch (ObjectNotFoundException)
@@ -97,7 +96,7 @@ namespace MinioFileManager.Controller
 
                 // Download the file
                 var memoryStream = new MemoryStream();
-                await _minioClient.GetObjectAsync(new GetObjectArgs()
+                await minioClient.GetObjectAsync(new GetObjectArgs()
                     .WithBucket(bucketName)
                     .WithObject(safeFileName)
                     .WithCallbackStream(stream => stream.CopyTo(memoryStream)));
@@ -123,7 +122,7 @@ namespace MinioFileManager.Controller
         {
             try
             {
-                var buckets = await _minioClient.ListBucketsAsync();
+                var buckets = await minioClient.ListBucketsAsync();
                 var result = new List<object>();
 
                 foreach (var bucket in buckets.Buckets)
@@ -131,7 +130,7 @@ namespace MinioFileManager.Controller
                     var objects = new List<string>();
 
                     // MinIO v6+ uses IObservable<Item> for listing
-                    var observable = _minioClient.ListObjectsAsync(
+                    var observable = minioClient.ListObjectsAsync(
                         new ListObjectsArgs()
                             .WithBucket(bucket.Name)
                             .WithRecursive(true)
@@ -178,7 +177,7 @@ namespace MinioFileManager.Controller
             try
             {
                 // Remove file
-                await _minioClient.RemoveObjectAsync(new RemoveObjectArgs()
+                await minioClient.RemoveObjectAsync(new RemoveObjectArgs()
                     .WithBucket(bucketName)
                     .WithObject(safeFileName));
 
@@ -207,7 +206,7 @@ namespace MinioFileManager.Controller
             try
             {
                 // Remove files
-                await _minioClient.RemoveObjectsAsync(
+                await minioClient.RemoveObjectsAsync(
                     new RemoveObjectsArgs()
                         .WithBucket(bucketName)
                         .WithObjects(files));
@@ -243,7 +242,7 @@ namespace MinioFileManager.Controller
                 // Validate source exists
                 try
                 {
-                    await _minioClient.StatObjectAsync(
+                    await minioClient.StatObjectAsync(
                         new StatObjectArgs()
                             .WithBucket(sourceBucket)
                             .WithObject(source));
@@ -261,12 +260,12 @@ namespace MinioFileManager.Controller
                         .WithBucket(sourceBucket)
                         .WithObject(source));
 
-                await _minioClient.CopyObjectAsync(copyArgs);
+                await minioClient.CopyObjectAsync(copyArgs);
 
                 // If 'cut=true', delete original file
                 if (cut)
                 {
-                    await _minioClient.RemoveObjectAsync(
+                    await minioClient.RemoveObjectAsync(
                         new RemoveObjectArgs()
                             .WithBucket(sourceBucket)
                             .WithObject(source));
@@ -305,7 +304,7 @@ namespace MinioFileManager.Controller
 
             try
             {
-                var url = await _minioClient.PresignedGetObjectAsync(
+                var url = await minioClient.PresignedGetObjectAsync(
                     new PresignedGetObjectArgs()
                         .WithBucket(bucketName)
                         .WithObject(safeFileName)
@@ -335,14 +334,14 @@ namespace MinioFileManager.Controller
             try
             {
                 // Ensure bucket exists
-                bool bucketExists = await _minioClient.BucketExistsAsync(
+                bool bucketExists = await minioClient.BucketExistsAsync(
                     new BucketExistsArgs().WithBucket(bucketName));
 
                 if (!bucketExists)
-                    await _minioClient.MakeBucketAsync(new MakeBucketArgs().WithBucket(bucketName));
+                    await minioClient.MakeBucketAsync(new MakeBucketArgs().WithBucket(bucketName));
 
                 // Generate presigned URL (valid 10 minutes)
-                var url = await _minioClient.PresignedPutObjectAsync(
+                var url = await minioClient.PresignedPutObjectAsync(
                     new PresignedPutObjectArgs()
                         .WithBucket(bucketName)
                         .WithObject(safeFileName)
@@ -381,10 +380,10 @@ namespace MinioFileManager.Controller
 
             try
             {
-                var stat = await _minioClient.StatObjectAsync(
+                var stat = await minioClient.StatObjectAsync(
                     new StatObjectArgs().WithBucket(bucketName).WithObject(safeFileName));
 
-                var tags = await _minioClient.GetObjectTagsAsync(
+                var tags = await minioClient.GetObjectTagsAsync(
                     new GetObjectTagsArgs().WithBucket(bucketName).WithObject(safeFileName));
 
                 return Ok(new
@@ -427,7 +426,7 @@ namespace MinioFileManager.Controller
             try
             {
                 // Set tag
-                await _minioClient.SetObjectTagsAsync(
+                await minioClient.SetObjectTagsAsync(
                     new SetObjectTagsArgs()
                         .WithBucket(bucketName)
                         .WithObject(safeFileName)
