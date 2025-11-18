@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using Minio;
 using Minio.ApiEndpoints;
 using Minio.DataModel.Args;
+using Minio.DataModel.Encryption;
 using Minio.DataModel.Tags;
 using Minio.Exceptions;
 using MinioFileManager.Model;
@@ -52,9 +53,11 @@ namespace MinioFileManager.Controller
                     .WithObject(safeFileName)
                     .WithStreamData(stream)
                     .WithObjectSize(file.Length)
-                    .WithContentType(file.ContentType));
+                    .WithContentType(file.ContentType)
+                    .WithServerSideEncryption(new SSES3()) // Add Encryption ( if u don't want it just delete it)
+                );
 
-                return Ok(new { file = safeFileName, bucket = bucketName, status = "uploaded" });
+            return Ok(new { file = safeFileName, bucket = bucketName, status = "uploaded" });
             }
             catch (MinioException ex)
             {
@@ -99,7 +102,9 @@ namespace MinioFileManager.Controller
                 await minioClient.GetObjectAsync(new GetObjectArgs()
                     .WithBucket(bucketName)
                     .WithObject(safeFileName)
-                    .WithCallbackStream(stream => stream.CopyTo(memoryStream)));
+                    .WithCallbackStream(stream => stream.CopyTo(memoryStream))
+                    .WithServerSideEncryption(new SSES3()) // Add Encryption ( if u don't want it just delete it)
+                );
 
                 memoryStream.Position = 0;
                 return File(memoryStream, "application/octet-stream", safeFileName);
@@ -134,7 +139,8 @@ namespace MinioFileManager.Controller
                         new ListObjectsArgs()
                             .WithBucket(bucket.Name)
                             .WithRecursive(true)
-                            .WithPrefix(prefix ?? string.Empty));
+                            .WithPrefix(prefix ?? string.Empty)
+                        );
 
                     var tcs = new TaskCompletionSource();
                     var subscription = observable.Subscribe(
@@ -179,7 +185,8 @@ namespace MinioFileManager.Controller
                 // Remove file
                 await minioClient.RemoveObjectAsync(new RemoveObjectArgs()
                     .WithBucket(bucketName)
-                    .WithObject(safeFileName));
+                    .WithObject(safeFileName)
+                );
 
                 return Ok(new { file = safeFileName, bucket = bucketName, status = "deleted" });
             }
