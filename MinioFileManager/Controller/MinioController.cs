@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Minio;
@@ -49,15 +50,14 @@ namespace MinioFileManager.Controller
 
                 // Upload the file to MinIO
                 await minioClient.PutObjectAsync(new PutObjectArgs()
-                    .WithBucket(bucketName)
-                    .WithObject(safeFileName)
-                    .WithStreamData(stream)
-                    .WithObjectSize(file.Length)
-                    .WithContentType(file.ContentType)
-                    .WithServerSideEncryption(new SSES3()) // Add Encryption ( if u don't want it just delete it)
+                        .WithBucket(bucketName)
+                        .WithObject(safeFileName)
+                        .WithStreamData(stream)
+                        .WithObjectSize(file.Length)
+                        .WithContentType(file.ContentType)
                 );
 
-            return Ok(new { file = safeFileName, bucket = bucketName, status = "uploaded" });
+                return Ok(new { file = safeFileName, bucket = bucketName, status = "uploaded" });
             }
             catch (MinioException ex)
             {
@@ -100,10 +100,9 @@ namespace MinioFileManager.Controller
                 // Download the file
                 var memoryStream = new MemoryStream();
                 await minioClient.GetObjectAsync(new GetObjectArgs()
-                    .WithBucket(bucketName)
-                    .WithObject(safeFileName)
-                    .WithCallbackStream(stream => stream.CopyTo(memoryStream))
-                    .WithServerSideEncryption(new SSES3()) // Add Encryption ( if u don't want it just delete it)
+                        .WithBucket(bucketName)
+                        .WithObject(safeFileName)
+                        .WithCallbackStream(stream => stream.CopyTo(memoryStream))
                 );
 
                 memoryStream.Position = 0;
@@ -140,7 +139,7 @@ namespace MinioFileManager.Controller
                             .WithBucket(bucket.Name)
                             .WithRecursive(true)
                             .WithPrefix(prefix ?? string.Empty)
-                        );
+                    );
 
                     var tcs = new TaskCompletionSource();
                     var subscription = observable.Subscribe(
@@ -422,7 +421,8 @@ namespace MinioFileManager.Controller
         /// Tags are stored as key-value pairs and support up to 10 entries per object.
         /// </summary>
         [HttpPost("Tags/{fileName}")]
-        public async Task<IActionResult> SetObjectTags(string fileName, [FromQuery] string? bucketName = null, [FromBody] Dictionary<string, string> tags = null!)
+        public async Task<IActionResult> SetObjectTags(string fileName, [FromQuery] string? bucketName = null,
+            [FromBody] Dictionary<string, string> tags = null!)
         {
             bucketName ??= _settings.BucketName;
             var safeFileName = Path.GetFileName(fileName);
